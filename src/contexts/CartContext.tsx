@@ -7,10 +7,13 @@ import {
   storageProductGetAll,
 } from '../storage/storageCart';
 
+import { tagCartUpdate } from '../notifications/notificationTags';
+
 export type CartContextDataProps = {
   addProductCart: (newProduct: StorageCartProps) => Promise<void>;
   removeProductCart: (productId: string) => Promise<void>;
   cart: StorageCartProps[];
+  sumProducts: (products: StorageCartProps[]) => number;
 }
 
 type CartContextProviderProps = {
@@ -26,6 +29,7 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     try {
       const storageResponse = await storageProductSave(newProduct);
       setCart(storageResponse);
+      handleUpdateTagCart();
     } catch (error) {
       throw error;
     }
@@ -35,10 +39,25 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
     try {
       const response = await storageProductRemove(productId);
       setCart(response);
+      handleUpdateTagCart();
     } catch (error) {
       throw error;
     }
   }
+
+  async function handleUpdateTagCart() {
+    try {
+      const productsList = await storageProductGetAll();
+      const productsQuantity = sumProducts(productsList);
+      tagCartUpdate(productsQuantity.toString());
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  function sumProducts(products: StorageCartProps[]) {
+    return products.reduce((accumulator, current) => accumulator + current.quantity, 0);
+  } 
 
   useEffect(() => {
     storageProductGetAll()
@@ -51,6 +70,7 @@ export function CartContextProvider({ children }: CartContextProviderProps) {
       cart,
       addProductCart,
       removeProductCart,
+      sumProducts,
     }}>
       {children}
     </CartContext.Provider>
